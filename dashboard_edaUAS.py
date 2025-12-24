@@ -77,26 +77,21 @@ st.subheader("📍 Peta Persebaran Akses Internet per Provinsi")
 
 fig_map = px.choropleth(
     df,
-    geojson=geojson_data,
-    locations="id",
-    featureidkey="id",          # 🔥 INI KUNCI NYA
+    locations="Provinsi",
+    locationmode="geojson-id",  # default country subdivision
     color="Internet_Total",
-    color_continuous_scale="RdYlGn",
-    hover_name="Provinsi"
+    scope="asia",
+    color_continuous_scale="RdYlGn"
 )
 
-
 fig_map.update_geos(
-    fitbounds="locations",
+    center={"lat": -2.5, "lon": 118},
+    projection_scale=4,
     visible=False
 )
 
-fig_map.update_layout(
-    margin=dict(r=0, t=0, l=0, b=0),
-    height=520
-)
-
 st.plotly_chart(fig_map, use_container_width=True)
+
 
 # =====================================================
 # REGRESI
@@ -179,6 +174,7 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
 
 
 
