@@ -30,14 +30,16 @@ df = load_data()
 # PENJELASAN DASHBOARD (KONTEKS SKRIPSI)
 # =====================
 st.markdown("""
-Dashboard ini digunakan sebagai media visualisasi **hasil Analisis Data Eksploratif (EDA)** dan **uji statistik Chi-Square** pada Bab IV (Hasil dan Pembahasan).
+Dashboard ini digunakan sebagai media penyajian **Visualisasi dan Penjelasan Hasil Analisis Data** pada Bab IV (Hasil dan Pembahasan).
 
-Visualisasi disusun secara **statis (tanpa panel kontrol)** agar:
-- Konsisten dengan standar penulisan skripsi
-- Mudah direplikasi sebagai gambar (Figure) dalam dokumen
-- Tidak mengubah hasil analisis melalui interaksi pengguna
+Struktur penyajian disesuaikan dengan kaidah penulisan skripsi Program Studi Sains Data, yang meliputi:
+1. Analisis Univariat
+2. Analisis Bivariat
+3. Kategorisasi Variabel
+4. Model Prediktif Regresi Linear
+5. Uji Statistik Chi-Square
 
-Data yang digunakan merupakan data agregat tingkat provinsi di Indonesia tahun 2024.
+Seluruh visualisasi disajikan secara **statis**, sehingga hasil analisis bersifat konsisten, dapat direplikasi, dan mudah dikonversi menjadi tabel atau gambar dalam dokumen skripsi.
 """)
 
 filtered_df = df.copy()
@@ -65,23 +67,23 @@ col1, col2 = st.columns(2)
 
 with container1:
     with col1:
-        st.subheader("📈 EDA – Distribusi Data")
+        st.subheader("📈 Visualisasi dan Penjelasan Analisis Univariat")
         st.markdown("Distribusi tingkat kemiskinan antar provinsi.")
         fig1 = plt.figure(figsize=(6,4))
         ax1 = fig1.add_subplot(111)
         filtered_df['Kemiskinan_Persen'].plot.hist(bins=15, alpha=0.7, ax=ax1)
         ax1.set_xlabel("Persentase Kemiskinan")
-        ax1.set_title("Histogram Kemiskinan")
+        ax1.set_title("Distribusi Tingkat Kemiskinan per Provinsi")
         st.pyplot(fig1)
 
     with col2:
-        st.subheader("📊 EDA – Perbandingan Kategori")
+        st.subheader("📊 Visualisasi dan Penjelasan Analisis Bivariat")
         st.markdown("Rata-rata kemiskinan berdasarkan kategori akses internet.")
         fig2 = plt.figure(figsize=(6,4))
         ax2 = fig2.add_subplot(111)
         filtered_df.groupby('Internet_Kategori')['Kemiskinan_Persen'].mean().plot.bar(ax=ax2, alpha=0.8)
         ax2.set_ylabel("Rata-rata Kemiskinan (%)")
-        ax2.set_title("Kemiskinan vs Akses Internet")
+        ax2.set_title("Hubungan Akses Internet dan Tingkat Kemiskinan")
         st.pyplot(fig2)
 
 # ======================================================
@@ -108,7 +110,7 @@ col3, col4 = st.columns(2)
 
 with container2:
     with col3:
-        st.subheader("🧪 Uji Chi-Square")
+        st.subheader("📋 Tabel Hasil Uji Chi-Square")
         st.markdown("Hubungan antara kategori akses internet dan tingkat kemiskinan.")
         contingency = pd.crosstab(filtered_df['Internet_Kategori'], filtered_df['Kemiskinan_Kategori'])
         chi2, p, dof, exp = chi2_contingency(contingency)
@@ -120,7 +122,7 @@ with container2:
         ax3.set_yticks(range(len(contingency.index)))
         ax3.set_xticklabels(contingency.columns)
         ax3.set_yticklabels(contingency.index)
-        ax3.set_title("Heatmap Kontingensi")
+        ax3.set_title("Tabel Kontingensi Akses Internet dan Kemiskinan")
         plt.colorbar(im, ax=ax3)
         st.pyplot(fig3)
         st.markdown(f"**Chi-Square:** {chi2:.3f}  \
@@ -128,14 +130,14 @@ with container2:
         **df:** {dof}")
 
     with col4:
-        st.subheader("🔗 Korelasi Variabel")
+        st.subheader("📈 Visualisasi dan Penjelasan Model Prediktif Regresi Linear")
         st.markdown("Hubungan linear antara akses internet dan kemiskinan.")
         fig4 = plt.figure(figsize=(6,4))
         ax4 = fig4.add_subplot(111)
         ax4.scatter(filtered_df['Internet_Total'], filtered_df['Kemiskinan_Persen'], alpha=0.7)
         ax4.set_xlabel("Akses Internet (%)")
         ax4.set_ylabel("Kemiskinan (%)")
-        ax4.set_title("Scatter Internet vs Kemiskinan")
+        ax4.set_title("Model Regresi Linear: Internet terhadap Kemiskinan")
         st.pyplot(fig4)
 
 # ======================================================
@@ -162,7 +164,7 @@ col5, col6 = st.columns(2)
 
 with container3:
     with col5:
-        st.subheader("🗂️ Metadata Variabel")
+        st.subheader("📋 Tabel Kategorisasi Variabel")
         metadata = pd.DataFrame({
             'Variabel': ['Provinsi', 'Internet_Total', 'Kemiskinan_Persen'],
             'Tipe': ['Kategorikal', 'Numerik', 'Numerik'],
@@ -175,7 +177,7 @@ with container3:
         st.dataframe(metadata)
 
     with col6:
-        st.subheader("📝 Kesimpulan & Insight")
+        st.subheader("📝 Ringkasan Hasil Analisis")
         if p < 0.05:
             st.success("Terdapat hubungan signifikan antara akses internet dan tingkat kemiskinan.")
         else:
