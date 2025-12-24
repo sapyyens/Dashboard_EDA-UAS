@@ -14,36 +14,18 @@ st.set_page_config(
 )
 
 # =====================================================
-# HELPER: NORMALISASI NAMA
-# =====================================================
-def normalize_name(x):
-    return (
-        str(x)
-        .upper()
-        .strip()
-        .replace(".", "")
-        .replace("  ", " ")
-    )
-
-# =====================================================
-# LOAD GEOJSON
+# LOAD GEOJSON (COORDINATE-BASED)
 # =====================================================
 @st.cache_data
-def get_geojson():
+def load_geojson():
     with open("38 Provinsi Indonesia - Provinsi.json", "r", encoding="utf-8") as f:
         geo = json.load(f)
 
-    # auto-detect field nama provinsi
-    sample_props = geo["features"][0]["properties"]
-    prov_key = list(sample_props.keys())[0]
+    # 🔥 Tambahkan ID ke setiap polygon
+    for i, feature in enumerate(geo["features"]):
+        feature["id"] = i
 
-    # normalisasi nama provinsi di GeoJSON
-    for feat in geo["features"]:
-        feat["properties"][prov_key] = normalize_name(
-            feat["properties"][prov_key]
-        )
-
-    return geo, prov_key
+    return geo
 
 # =====================================================
 # LOAD DATA
@@ -53,25 +35,17 @@ def load_data():
     df = pd.read_csv("dataset_cleaned.csv")
     df.columns = df.columns.str.strip()
 
-    df["Prov_Match"] = df["Provinsi"].apply(normalize_name)
-
-    # mapping ringan (AMAN)
-    mapping = {
-        "DI YOGYAKARTA": "DAERAH ISTIMEWA YOGYAKARTA",
-        "DAERAH KHUSUS IBUKOTA JAKARTA": "DKI JAKARTA",
-        "KEPULAUAN RIAU": "KEP RIAU",
-        "KEPULAUAN BANGKA BELITUNG": "KEP BANGKA BELITUNG",
-    }
-
-    df["Prov_Match"] = df["Prov_Match"].replace(mapping)
+    # 🔥 PENTING:
+    # URUTAN CSV HARUS SAMA DENGAN URUTAN PROVINSI DI GEOJSON
+    df["id"] = df.index
 
     return df
 
 # =====================================================
-# LOAD SEMUA
+# LOAD
 # =====================================================
+geojson_data = load_geojson()
 df = load_data()
-geojson_data, prov_key = get_geojson()
 
 # =====================================================
 # HEADER
@@ -90,19 +64,17 @@ col4.metric("R²", "0.6796")
 st.divider()
 
 # =====================================================
-# PETA CHOROPLETH (ANTI PUTIH)
+# PETA (COORDINATE-BASED – PALING AMAN)
 # =====================================================
 st.subheader("📍 Peta Persebaran Akses Internet per Provinsi")
 
 fig_map = px.choropleth(
     df,
     geojson=geojson_data,
-    locations="Prov_Match",
-    featureidkey=f"properties.{prov_key}",
+    locations="id",          # 🔥 JOIN VIA ID
     color="Internet_Total",
     color_continuous_scale="RdYlGn",
-    hover_name="Provinsi",
-    labels={"Internet_Total": "Akses Internet (%)"}
+    hover_name="Provinsi"
 )
 
 fig_map.update_geos(
