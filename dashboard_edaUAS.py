@@ -7,17 +7,33 @@ from scipy.stats import chi2_contingency
 st.set_page_config(page_title="Dashboard Analisis Chi-Square", layout="wide")
 
 st.title("📊 Dashboard Analisis Chi-Square & EDA")
-st.markdown("Dashboard interaktif untuk eksplorasi data, uji Chi-Square, korelasi, dan insight analitis")
+st.markdown("Dashboard interaktif untuk EDA, korelasi, dan uji Chi-Square berbasis dataset tingkat provinsi")
 
 # =====================
 # LOAD DATA
 # =====================
 @st.cache_data
 def load_data():
-    # Sesuaikan dengan dataset final hasil EDA kamu
     return pd.read_csv("dataset_cleaned.csv")
 
 df = load_data()
+
+# =====================
+# PREPROCESSING
+# =====================
+# Kategorisasi untuk kebutuhan Chi-Square
+
+df['Kemiskinan_Kategori'] = pd.cut(
+    df['Kemiskinan_Persen'],
+    bins=[0, 5, 10, 100],
+    labels=['Rendah', 'Sedang', 'Tinggi']
+)
+
+df['Internet_Kategori'] = pd.cut(
+    df['Internet_Total'],
+    bins=[0, 80, 90, 100],
+    labels=['Rendah', 'Sedang', 'Tinggi']
+)
 
 # =====================
 # SIDEBAR FILTER
@@ -30,13 +46,7 @@ provinsi = st.sidebar.multiselect(
     default=df['Provinsi'].unique()
 )
 
-tahun = st.sidebar.multiselect(
-    "Tahun",
-    options=df['Tahun'].unique(),
-    default=df['Tahun'].unique()
-)
-
-filtered_df = df[(df['Provinsi'].isin(provinsi)) & (df['Tahun'].isin(tahun))]
+filtered_df = df[df['Provinsi'].isin(provinsi)]
 
 # =====================
 # GRID 3x2 LAYOUT
@@ -50,27 +60,22 @@ row2_col1, row2_col2, row2_col3 = st.columns(3)
 with row1_col1:
     st.subheader("EDA – Distribusi")
     fig, ax = plt.subplots()
-    filtered_df['Jumlah'].plot(kind='hist', bins=20, ax=ax)
-    ax.set_title("Distribusi Jumlah")
+    filtered_df['Kemiskinan_Persen'].plot(kind='hist', bins=15, ax=ax)
+    ax.set_title("Distribusi Persentase Kemiskinan")
     st.pyplot(fig)
 
     st.write("Statistik Deskriptif")
-    st.dataframe(filtered_df['Jumlah'].describe())
+    st.dataframe(filtered_df[['Kemiskinan_Persen', 'Internet_Total']].describe())
 
 # =====================
 # 2. EDA - TREN & KATEGORI
 # =====================
 with row1_col2:
-    st.subheader("EDA – Tren & Kategori")
+    st.subheader("EDA – Perbandingan Kategori")
     fig2, ax2 = plt.subplots()
-    filtered_df.groupby('Tahun')['Jumlah'].sum().plot(marker='o', ax=ax2)
-    ax2.set_title("Tren Jumlah per Tahun")
+    filtered_df.groupby('Internet_Kategori')['Kemiskinan_Persen'].mean().plot(kind='bar', ax=ax2)
+    ax2.set_title("Rata-rata Kemiskinan berdasarkan Kategori Internet")
     st.pyplot(fig2)
-
-    fig3, ax3 = plt.subplots()
-    filtered_df.groupby('Kategori')['Jumlah'].sum().plot(kind='bar', ax=ax3)
-    ax3.set_title("Jumlah per Kategori")
-    st.pyplot(fig3)
 
 # =====================
 # 3. UJI CHI-SQUARE
@@ -78,17 +83,21 @@ with row1_col2:
 with row1_col3:
     st.subheader("Uji Chi-Square")
 
-    contingency = pd.crosstab(filtered_df['Kategori'], filtered_df['Provinsi'])
+    contingency = pd.crosstab(filtered_df['Internet_Kategori'], filtered_df['Kemiskinan_Kategori'])
     chi2, p, dof, expected = chi2_contingency(contingency)
 
     st.write("Tabel Kontingensi")
     st.dataframe(contingency)
 
-    fig4, ax4 = plt.subplots()
-    im = ax4.imshow(contingency, aspect='auto')
-    ax4.set_title("Heatmap Kontingensi")
-    plt.colorbar(im, ax=ax4)
-    st.pyplot(fig4)
+    fig3, ax3 = plt.subplots()
+    im = ax3.imshow(contingency, aspect='auto')
+    ax3.set_xticks(range(len(contingency.columns)))
+    ax3.set_yticks(range(len(contingency.index)))
+    ax3.set_xticklabels(contingency.columns)
+    ax3.set_yticklabels(contingency.index)
+    ax3.set_title("Heatmap Kontingensi")
+    plt.colorbar(im, ax=ax3)
+    st.pyplot(fig3)
 
     st.markdown(f"""
     **Chi-Square** : {chi2:.3f}  
@@ -100,17 +109,18 @@ with row1_col3:
 # 4. KORELASI & MODEL
 # =====================
 with row2_col1:
-    st.subheader("Korelasi & Model")
+    st.subheader("Korelasi")
 
-    corr = filtered_df[['Jumlah']].corr()
-    fig5, ax5 = plt.subplots()
-    im2 = ax5.imshow(corr)
-    ax5.set_title("Matriks Korelasi")
-    plt.colorbar(im2, ax=ax5)
-    st.pyplot(fig5)
-
-    st.write("Ringkasan:")
-    st.info("Analisis korelasi terbatas pada variabel numerik yang tersedia.")
+    corr = filtered_df[['Internet_Total', 'Kemiskinan_Persen']].corr()
+    fig4, ax4 = plt.subplots()
+    im2 = ax4.imshow(corr)
+    ax4.set_xticks(range(len(corr.columns)))
+    ax4.set_yticks(range(len(corr.columns)))
+    ax4.set_xticklabels(corr.columns)
+    ax4.set_yticklabels(corr.columns)
+    ax4.set_title("Matriks Korelasi")
+    plt.colorbar(im2, ax=ax4)
+    st.pyplot(fig4)
 
 # =====================
 # 5. METADATA VARIABEL
@@ -119,14 +129,14 @@ with row2_col2:
     st.subheader("Metadata Variabel")
 
     metadata = pd.DataFrame({
-        'Nama Variabel': ['Provinsi', 'Tahun', 'Kategori', 'Jumlah'],
-        'Tipe Data': ['Kategorikal', 'Ordinal', 'Kategorikal', 'Numerik'],
-        'Kategori': ['Wilayah', 'Waktu', 'Status Gizi', 'Jumlah Kasus'],
+        'Variabel': ['Provinsi', 'Internet_Perkotaan', 'Internet_Perdesaan', 'Internet_Total', 'Kemiskinan_Persen'],
+        'Tipe Data': ['Kategorikal', 'Numerik', 'Numerik', 'Numerik', 'Numerik'],
         'Deskripsi': [
             'Nama provinsi',
-            'Tahun pengamatan',
-            'Kategori stunting',
-            'Jumlah kasus stunting'
+            'Persentase akses internet wilayah perkotaan',
+            'Persentase akses internet wilayah perdesaan',
+            'Total persentase akses internet',
+            'Persentase penduduk miskin'
         ]
     })
 
@@ -139,22 +149,20 @@ with row2_col3:
     st.subheader("Kesimpulan & Rekomendasi")
 
     if p < 0.05:
-        st.success("Terdapat hubungan signifikan antar variabel (p < 0.05)")
+        st.success("Terdapat hubungan signifikan antara akses internet dan tingkat kemiskinan (p < 0.05)")
     else:
-        st.warning("Tidak terdapat hubungan signifikan antar variabel (p ≥ 0.05)")
+        st.warning("Tidak terdapat hubungan signifikan antara akses internet dan tingkat kemiskinan (p ≥ 0.05)")
 
     st.markdown("""
     **Insight:**
-    - Distribusi stunting berbeda antar provinsi dan kategori
-    - Pola tren dapat diamati secara temporal
+    - Provinsi dengan akses internet lebih tinggi cenderung memiliki tingkat kemiskinan lebih rendah
 
     **Rekomendasi:**
-    - Fokus intervensi pada kategori dengan frekuensi tinggi
-    - Lakukan analisis lanjutan dengan variabel tambahan
+    - Peningkatan infrastruktur internet di wilayah dengan kemiskinan tinggi
 
     **Batasan:**
-    - Data agregat
-    - Tidak mencerminkan kausalitas
+    - Data agregat provinsi
+    - Kategorisasi bersifat diskret
     """)
 
 st.caption("Dashboard Streamlit – Analisis Chi-Square & EDA")
