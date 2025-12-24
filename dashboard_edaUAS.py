@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import json
 
 # =====================================================
 # CONFIG
@@ -14,50 +13,21 @@ st.set_page_config(
 )
 
 # =====================================================
-# LOAD GEOJSON (COORDINATE-BASED)
-# =====================================================
-@st.cache_data
-def load_geojson():
-    with open("38 Provinsi Indonesia - Provinsi.json", "r", encoding="utf-8") as f:
-        geo = json.load(f)
-
-    # 🔥 Tambahkan ID ke setiap polygon
-    for i, feature in enumerate(geo["features"]):
-        feature["id"] = i
-
-    return geo
-
-# =====================================================
 # LOAD DATA
 # =====================================================
 @st.cache_data
 def load_data():
     df = pd.read_csv("dataset_cleaned.csv")
     df.columns = df.columns.str.strip()
-
-    # 🔥 PENTING:
-    # URUTAN CSV HARUS SAMA DENGAN URUTAN PROVINSI DI GEOJSON
-    df["id"] = df.index
-
     return df
 
-# =====================================================
-# LOAD
-# =====================================================
-geojson_data = load_geojson()
 df = load_data()
-
-# =====================================================
-# FIX KRUSIAL: SINKRON ID
-# =====================================================
-n_geo = len(geojson_data["features"])
-df = df.reindex(range(n_geo))
-df["id"] = df.index
 
 # =====================================================
 # HEADER
 # =====================================================
-st.title("📈 Analisis Ketimpangan Digital di Indonesia 2024")
+st.title("📊 Analisis Ketimpangan Digital di Indonesia 2024")
+st.caption("Pendekatan tabel statistik (tanpa visualisasi spasial)")
 
 # =====================================================
 # KPI
@@ -71,94 +41,106 @@ col4.metric("R²", "0.6796")
 st.divider()
 
 # =====================================================
-# PETA (COORDINATE-BASED – PALING AMAN)
+# TABEL UTAMA
 # =====================================================
-st.subheader("📍 Peta Persebaran Akses Internet per Provinsi")
+st.subheader("📋 Tabel Data Utama per Provinsi")
 
-fig_map = px.choropleth(
-    df,
-    locations="Provinsi",
-    locationmode="geojson-id",  # default country subdivision
-    color="Internet_Total",
-    scope="asia",
-    color_continuous_scale="RdYlGn"
+df_display = df[[
+    "Provinsi",
+    "Kemiskinan_Persen",
+    "Internet_Total"
+]].sort_values("Internet_Total", ascending=False)
+
+st.dataframe(
+    df_display,
+    use_container_width=True,
+    hide_index=True
 )
 
-fig_map.update_geos(
-    center={"lat": -2.5, "lon": 118},
-    projection_scale=4,
-    visible=False
-)
-
-st.plotly_chart(fig_map, use_container_width=True)
-
-
-
 # =====================================================
-# REGRESI
+# RANKING
 # =====================================================
 st.divider()
-c1, c2 = st.columns(2)
+st.subheader("🏆 Ranking Provinsi Berdasarkan Akses Internet")
 
-with c1:
-    st.subheader("📉 Analisis Regresi Linear")
+df_rank = df_display.copy()
+df_rank["Ranking Internet"] = range(1, len(df_rank) + 1)
 
-    x = df["Kemiskinan_Persen"]
-    y = df["Internet_Total"]
+st.dataframe(
+    df_rank,
+    use_container_width=True,
+    hide_index=True
+)
 
-    slope, intercept = np.polyfit(x, y, 1)
-    line_x = np.array([x.min(), x.max()])
-    line_y = slope * line_x + intercept
-
-    fig_reg = px.scatter(
-        df,
-        x="Kemiskinan_Persen",
-        y="Internet_Total",
-        hover_name="Provinsi"
-    )
-
-    fig_reg.add_trace(
-        go.Scatter(
-            x=line_x,
-            y=line_y,
-            mode="lines",
-            name="Regresi",
-            line=dict(color="red")
-        )
-    )
-
-    st.plotly_chart(fig_reg, use_container_width=True)
-    st.info(f"**Model:** Y = {intercept:.2f} + {slope:.2f}X")
-
-with c2:
-    st.subheader("📊 Tabel Kontingensi (Chi-Square)")
-
-    heatmap_data = pd.DataFrame(
-        [[10, 2, 1],
-         [3, 12, 2],
-         [1, 2, 5]],
-        index=[
-            "Kemiskinan Rendah",
-            "Kemiskinan Sedang",
-            "Kemiskinan Tinggi"
-        ],
-        columns=[
-            "Internet Rendah",
-            "Internet Sedang",
-            "Internet Tinggi"
-        ]
-    )
-
-    fig_heat = px.imshow(
-        heatmap_data,
-        text_auto=True,
-        color_continuous_scale="Blues"
-    )
-
-    st.plotly_chart(fig_heat, use_container_width=True)
-    st.success("**P-Value: 0.001871** (Hubungan Signifikan)")
 # =====================================================
-# RESIDUAL
+# KATEGORISASI
+# =====================================================
+st.divider()
+st.subheader("📌 Kategorisasi Provinsi")
+
+df_cat = df.copy()
+
+df_cat["Kategori Internet"] = pd.cut(
+    df_cat["Internet_Total"],
+    bins=[0, 50, 75, 100],
+    labels=["Rendah", "Sedang", "Tinggi"]
+)
+
+df_cat["Kategori Kemiskinan"] = pd.cut(
+    df_cat["Kemiskinan_Persen"],
+    bins=[0, 7, 12, 100],
+    labels=["Rendah", "Sedang", "Tinggi"]
+)
+
+st.dataframe(
+    df_cat[[
+        "Provinsi",
+        "Internet_Total",
+        "Kategori Internet",
+        "Kemiskinan_Persen",
+        "Kategori Kemiskinan"
+    ]],
+    use_container_width=True,
+    hide_index=True
+)
+
+# =====================================================
+# REGRESI (TETAP BOLEH)
+# =====================================================
+st.divider()
+st.subheader("📉 Analisis Regresi Linear")
+
+x = df["Kemiskinan_Persen"]
+y = df["Internet_Total"]
+
+slope, intercept = np.polyfit(x, y, 1)
+
+fig_reg = px.scatter(
+    df,
+    x="Kemiskinan_Persen",
+    y="Internet_Total",
+    hover_name="Provinsi",
+    labels={
+        "Kemiskinan_Persen": "Kemiskinan (%)",
+        "Internet_Total": "Akses Internet (%)"
+    }
+)
+
+fig_reg.add_trace(
+    go.Scatter(
+        x=[x.min(), x.max()],
+        y=[intercept + slope * x.min(), intercept + slope * x.max()],
+        mode="lines",
+        name="Regresi",
+        line=dict(color="red")
+    )
+)
+
+st.plotly_chart(fig_reg, use_container_width=True)
+st.info(f"Model Regresi: **Y = {intercept:.2f} + ({slope:.2f})X**")
+
+# =====================================================
+# TABEL RESIDUAL
 # =====================================================
 st.divider()
 st.subheader("🎯 Analisis Residual Terstandarisasi")
@@ -171,14 +153,9 @@ res_df = pd.DataFrame({
 
 st.table(res_df)
 
+st.success("**P-Value: 0.001871** → Hubungan signifikan antara kemiskinan dan akses internet")
+
 st.warning(
-    "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
-    "**Kemiskinan Tinggi – Internet Rendah**."
+    "Insight: Konsentrasi tertinggi terjadi pada kategori "
+    "**Kemiskinan Tinggi – Internet Rendah**, menunjukkan ketimpangan digital yang nyata."
 )
-
-
-
-
-
-
-
