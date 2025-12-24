@@ -52,13 +52,17 @@ df_table = df[[
 ]].sort_values(
     by="Internet_Total",
     ascending=False
-)
+).reset_index(drop=True)
 
 st.dataframe(
     df_table,
     use_container_width=True,
     hide_index=True
 )
+
+# 🔍 INSIGHT TABEL (SUDAH FIX)
+prov_tertinggi = df_table.iloc[0]
+prov_terendah = df_table.iloc[-1]
 
 st.info(
     f"📌 **Insight Tabel:** Provinsi dengan akses internet tertinggi adalah "
@@ -69,6 +73,7 @@ st.info(
     f"({prov_terendah['Internet_Total']:.2f}%). "
     f"Perbedaan ini mengindikasikan ketimpangan infrastruktur digital antar wilayah."
 )
+
 st.divider()
 
 # =====================================================
@@ -76,7 +81,7 @@ st.divider()
 # =====================================================
 st.subheader("🏆 Ranking Provinsi Berdasarkan Akses Internet")
 
-df_rank = df_display.copy()
+df_rank = df_table.copy()
 df_rank["Ranking Internet"] = range(1, len(df_rank) + 1)
 
 st.dataframe(
@@ -84,7 +89,9 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
 st.divider()
+
 # =====================================================
 # KATEGORISASI
 # =====================================================
@@ -115,7 +122,9 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
 st.divider()
+
 # =====================================================
 # REGRESI
 # =====================================================
@@ -200,5 +209,3 @@ st.warning(
     "**Kemiskinan Tinggi – Internet Rendah**, "
     "menunjukkan ketimpangan digital yang nyata."
 )
-
-
