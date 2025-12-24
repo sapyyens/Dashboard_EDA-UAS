@@ -75,24 +75,22 @@ st.divider()
 # =====================================================
 st.subheader("📍 Peta Persebaran Akses Internet per Provinsi")
 
-fig = px.scatter_geo(
+fig_map = px.choropleth(
     df,
-    lat="Latitude",
-    lon="Longitude",
-    size="Internet_Total",
+    locations="Provinsi",
+    locationmode="geojson-id",  # default country subdivision
     color="Internet_Total",
-    hover_name="Provinsi",
     scope="asia",
     color_continuous_scale="RdYlGn"
 )
 
-fig.update_geos(
+fig_map.update_geos(
     center={"lat": -2.5, "lon": 118},
     projection_scale=4,
     visible=False
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig_map, use_container_width=True)
 
 
 
@@ -177,6 +175,7 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
 
 
 
