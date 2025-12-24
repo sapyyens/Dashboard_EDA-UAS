@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import json
 
 # --- CONFIG ---
 st.set_page_config(page_title="Dashboard Kelompok 1 - EDA 2024", layout="wide")
@@ -93,3 +94,4 @@ st.warning("""
 """)
 
 st.caption("Dikembangkan oleh Kelompok 1 - Sains Data UPNVJT")
+
