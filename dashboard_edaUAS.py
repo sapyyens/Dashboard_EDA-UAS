@@ -78,7 +78,6 @@ fig_map = px.choropleth(
     hover_name="Provinsi"
 )
 
-)
 
 fig_map.update_geos(
     fitbounds="locations",
@@ -173,3 +172,4 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
