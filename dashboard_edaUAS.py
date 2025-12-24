@@ -71,10 +71,13 @@ st.subheader("📍 Peta Persebaran Akses Internet per Provinsi")
 fig_map = px.choropleth(
     df,
     geojson=geojson_data,
-    locations="id",          # 🔥 JOIN VIA ID
+    locations="id",
+    featureidkey="id",          # 🔥 INI KUNCI NYA
     color="Internet_Total",
     color_continuous_scale="RdYlGn",
     hover_name="Provinsi"
+)
+
 )
 
 fig_map.update_geos(
@@ -171,4 +174,5 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
 
