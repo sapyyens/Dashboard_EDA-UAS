@@ -26,15 +26,21 @@ df = load_data()
 # ======================================================
 # SIDEBAR (CONTROL PANEL)
 # ======================================================
-st.sidebar.markdown("### 🎛️ Panel Kontrol")
+# =====================
+# PENJELASAN DASHBOARD (KONTEKS SKRIPSI)
+# =====================
+st.markdown("""
+Dashboard ini digunakan sebagai media visualisasi **hasil Analisis Data Eksploratif (EDA)** dan **uji statistik Chi-Square** pada Bab IV (Hasil dan Pembahasan).
 
-provinsi = st.sidebar.multiselect(
-    "Pilih Provinsi",
-    options=df['Provinsi'].unique(),
-    default=df['Provinsi'].unique()
-)
+Visualisasi disusun secara **statis (tanpa panel kontrol)** agar:
+- Konsisten dengan standar penulisan skripsi
+- Mudah direplikasi sebagai gambar (Figure) dalam dokumen
+- Tidak mengubah hasil analisis melalui interaksi pengguna
 
-filtered_df = df[df['Provinsi'].isin(provinsi)]
+Data yang digunakan merupakan data agregat tingkat provinsi di Indonesia tahun 2024.
+""")
+
+filtered_df = df.copy()
 
 # ======================================================
 # PREPROCESSING (UNTUK CHI-SQUARE)
