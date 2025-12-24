@@ -48,6 +48,13 @@ geojson_data = load_geojson()
 df = load_data()
 
 # =====================================================
+# FIX KRUSIAL: SINKRON ID
+# =====================================================
+n_geo = len(geojson_data["features"])
+df = df.reindex(range(n_geo))
+df["id"] = df.index
+
+# =====================================================
 # HEADER
 # =====================================================
 st.title("📈 Analisis Ketimpangan Digital di Indonesia 2024")
@@ -172,4 +179,5 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
 
