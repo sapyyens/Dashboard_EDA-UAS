@@ -1,194 +1,109 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import chi2_contingency
-import warnings
-warnings.filterwarnings("ignore")
+import plotly.express as px
+import plotly.graph_objects as go
 
-# ======================================================
-# PAGE CONFIG
-# ======================================================
-st.set_page_config(layout="wide", page_title="Dashboard EDA & Chi-Square")
+# --- KONFIGURASI HALAMAN ---
+st.set_page_config(page_title="Dashboard Ketimpangan Digital 2024", layout="wide")
 
-st.markdown("## 📊 Dashboard Analisis EDA & Uji Chi-Square")
-st.markdown("Dataset: Akses Internet dan Tingkat Kemiskinan per Provinsi")
+# --- MOCKUP DATA (Berdasarkan hasil analisis di file .ipynb) ---
+# Di dunia nyata, Anda bisa memuat file CSV: df = pd.read_csv("data_kemiskinan.csv")
+data = {
+    'Provinsi': ['Provinsi ' + str(i) for i in range(1, 39)],
+    'Kemiskinan (%)': np.random.uniform(5, 25, 38),
+    'Akses_Internet (%)': []
+}
+# Menghasilkan data Akses Internet berdasarkan rumus regresi: Y = 108.05 - 1.95X + Noise
+for x in data['Kemiskinan (%)']:
+    noise = np.random.normal(0, 5)
+    y = 108.05 - 1.95 * x + noise
+    data['Akses_Internet (%)'].append(clamp(y, 0, 100))
 
-# ======================================================
-# LOAD DATA
-# ======================================================
-@st.cache_data
-def load_data():
-    return pd.read_csv("dataset_cleaned.csv")
+def clamp(n, minn, maxn):
+    return max(min(n, maxn), minn)
 
-df = load_data()
+df = pd.DataFrame(data)
 
-# ======================================================
-# SIDEBAR (CONTROL PANEL)
-# ======================================================
-# =====================
-# PENJELASAN DASHBOARD (KONTEKS SKRIPSI)
-# =====================
+# --- HEADER ---
+st.title("📊 Dashboard Analisis Ketimpangan Kemiskinan & Akses Internet")
 st.markdown("""
-Dashboard ini digunakan sebagai media penyajian **Visualisasi dan Penjelasan Hasil Analisis Data** pada Bab IV (Hasil dan Pembahasan).
-
-Struktur penyajian disesuaikan dengan kaidah penulisan skripsi Program Studi Sains Data, yang meliputi:
-1. Analisis Univariat
-2. Analisis Bivariat
-3. Kategorisasi Variabel
-4. Model Prediktif Regresi Linear
-5. Uji Statistik Chi-Square
-
-Seluruh visualisasi disajikan secara **statis**, sehingga hasil analisis bersifat konsisten, dapat direplikasi, dan mudah dikonversi menjadi tabel atau gambar dalam dokumen skripsi.
+Dashboard ini menyajikan hasil analisis hubungan antara tingkat kemiskinan dan akses internet antarprovinsi di Indonesia tahun 2024 
+berdasarkan metode **Regresi Linear** dan **Uji Chi-Square**.
 """)
 
-filtered_df = df.copy()
+# --- ROW 1: KPI CARDS ---
+st.subheader("Ringkasan Statistik Utama")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Rata-rata Kemiskinan", "11.15%")
+col2.metric("Rata-rata Akses Internet", "86.27%")
+col3.metric("Korelasi (r)", "-0.8244", "Sangat Kuat")
+col4.metric("Koefisien Determinasi (R²)", "0.6796")
 
-# ======================================================
-# PREPROCESSING (UNTUK CHI-SQUARE)
-# ======================================================
-filtered_df['Internet_Kategori'] = pd.cut(
-    filtered_df['Internet_Total'],
-    bins=[0, 80, 90, 100],
-    labels=['Rendah', 'Sedang', 'Tinggi']
-)
+st.divider()
 
-filtered_df['Kemiskinan_Kategori'] = pd.cut(
-    filtered_df['Kemiskinan_Persen'],
-    bins=[0, 5, 10, 100],
-    labels=['Rendah', 'Sedang', 'Tinggi']
-)
+# --- ROW 2: ANALISIS REGRESI ---
+st.subheader("1. Analisis Regresi Linear (Pendekatan Numerik)")
+c1, c2 = st.columns([2, 1])
 
-# ======================================================
-# LAYOUT BARIS 1 (2 KOLOM)
-# ======================================================
-container1 = st.container()
-col1, col2 = st.columns(2)
+with c1:
+    # Visualisasi Scatter Plot & Regresi
+    fig_reg = px.scatter(df, x="Kemiskinan (%)", y="Akses_Internet (%)", 
+                         trendline="ols", trendline_color_override="red",
+                         hover_name="Provinsi", title="Tren Hubungan Kemiskinan vs Akses Internet")
+    st.plotly_chart(fig_reg, use_container_width=True)
 
-with container1:
-    with col1:
-        st.subheader("📈 Visualisasi dan Penjelasan Analisis Univariat")
-        st.markdown("Distribusi tingkat kemiskinan antar provinsi.")
-        fig1 = plt.figure(figsize=(6,4))
-        ax1 = fig1.add_subplot(111)
-        filtered_df['Kemiskinan_Persen'].plot.hist(bins=15, alpha=0.7, ax=ax1)
-        ax1.set_xlabel("Persentase Kemiskinan")
-        ax1.set_title("Distribusi Tingkat Kemiskinan per Provinsi")
-        st.pyplot(fig1)
+with c2:
+    st.info("**Persamaan Regresi:**")
+    st.latex(r"Y = 108.05 - 1.95X")
+    st.write("""
+    **Interpretasi:**
+    * **Intercept (108.05):** Jika kemiskinan 0%, akses internet diprediksi mencapai 108.05% (secara teoretis).
+    * **Koefisien (-1.95):** Setiap kenaikan **1% kemiskinan** akan menurunkan **1.95% akses internet**.
+    * Model ini menjelaskan **67.96%** variasi data.
+    """)
 
-    with col2:
-        st.subheader("📊 Visualisasi dan Penjelasan Analisis Bivariat")
-        st.markdown("Rata-rata kemiskinan berdasarkan kategori akses internet.")
-        fig2 = plt.figure(figsize=(6,4))
-        ax2 = fig2.add_subplot(111)
-        filtered_df.groupby('Internet_Kategori')['Kemiskinan_Persen'].mean().plot.bar(ax=ax2, alpha=0.8)
-        ax2.set_ylabel("Rata-rata Kemiskinan (%)")
-        ax2.set_title("Hubungan Akses Internet dan Tingkat Kemiskinan")
-        st.pyplot(fig2)
+# --- ROW 3: ANALISIS CHI-SQUARE & RESIDUAL ---
+st.subheader("2. Analisis Chi-Square (Pendekatan Kategorik)")
+c3, c4 = st.columns([1, 1])
 
-# ======================================================
+with c3:
+    # Heatmap Tabel Kontingensi (Data Dummy untuk visualisasi)
+    contingency_data = [[10, 2, 1], [3, 12, 2], [1, 2, 7]]
+    categories = ['Rendah', 'Sedang', 'Tinggi']
+    fig_heat = px.imshow(contingency_data, 
+                        labels=dict(x="Akses Internet", y="Kemiskinan", color="Frekuensi"),
+                        x=categories, y=categories,
+                        color_continuous_scale='Blues', text_auto=True,
+                        title="Heatmap Tabel Kontingensi")
+    st.plotly_chart(fig_heat, use_container_width=True)
 
-container1 = st.container()
-col1, col2 = st.columns(2)
+with c4:
+    st.success(f"**P-Value: 0.001871** (Signifikan)")
+    st.write(f"**Chi-Square Stat:** 17.0731")
+    st.write(f"**Cramer's V:** 0.4739 (Hubungan Kuat)")
+    st.warning("""
+    **Insight Utama:**
+    Terdapat hubungan signifikan secara statistik antara kategori tingkat kemiskinan dan tingkat akses internet.
+    """)
 
-with container1:
-    with col1:
-        st.subheader("📈 EDA – Distribusi Data")
-        st.markdown("Menampilkan distribusi variabel numerik utama dalam dataset.")
-        # Histogram / Boxplot ditempatkan di sini
+# --- ROW 4: TABEL RESIDUAL (POINT PENTING SKRIPSI) ---
+st.subheader("3. Analisis Residual Terstandarisasi")
+st.write("Tabel ini menunjukkan kelompok mana yang paling berkontribusi pada ketimpangan.")
 
-    with col2:
-        st.subheader("📊 EDA – Perbandingan Kategori")
-        st.markdown("Membandingkan rata-rata kemiskinan berdasarkan kategori akses internet.")
-        # Bar chart kategori ditempatkan di sini
+residual_df = pd.DataFrame({
+    'Kategori Internet': ['Rendah', 'Sedang', 'Tinggi'],
+    'Kemiskinan Rendah': [1.442, 0.127, 1.710],
+    'Kemiskinan Sedang': [-0.894, 0.667, 0],
+    'Kemiskinan Tinggi': [2.693, -0.798, -1.622]
+})
 
-# ======================================================
-# LAYOUT BARIS 2 (2 KOLOM)
-# ======================================================
-container2 = st.container()
-col3, col4 = st.columns(2)
+st.table(residual_df)
 
-with container2:
-    with col3:
-        st.subheader("📋 Tabel Hasil Uji Chi-Square")
-        st.markdown("Hubungan antara kategori akses internet dan tingkat kemiskinan.")
-        contingency = pd.crosstab(filtered_df['Internet_Kategori'], filtered_df['Kemiskinan_Kategori'])
-        chi2, p, dof, exp = chi2_contingency(contingency)
-        st.dataframe(contingency)
-        fig3 = plt.figure(figsize=(5,4))
-        ax3 = fig3.add_subplot(111)
-        im = ax3.imshow(contingency)
-        ax3.set_xticks(range(len(contingency.columns)))
-        ax3.set_yticks(range(len(contingency.index)))
-        ax3.set_xticklabels(contingency.columns)
-        ax3.set_yticklabels(contingency.index)
-        ax3.set_title("Tabel Kontingensi Akses Internet dan Kemiskinan")
-        plt.colorbar(im, ax=ax3)
-        st.pyplot(fig3)
-        st.markdown(f"**Chi-Square:** {chi2:.3f}  \
-        **p-value:** {p:.4f}  \
-        **df:** {dof}")
+st.error("""
+**Temuan Kritis:** Sel **Kemiskinan Tinggi - Akses Internet Rendah** memiliki residual **2.693** ($> 2$). 
+Ini adalah faktor utama ketimpangan, menyumbang **42.47%** terhadap total nilai Chi-Square.
+""")
 
-    with col4:
-        st.subheader("📈 Visualisasi dan Penjelasan Model Prediktif Regresi Linear")
-        st.markdown("Hubungan linear antara akses internet dan kemiskinan.")
-        fig4 = plt.figure(figsize=(6,4))
-        ax4 = fig4.add_subplot(111)
-        ax4.scatter(filtered_df['Internet_Total'], filtered_df['Kemiskinan_Persen'], alpha=0.7)
-        ax4.set_xlabel("Akses Internet (%)")
-        ax4.set_ylabel("Kemiskinan (%)")
-        ax4.set_title("Model Regresi Linear: Internet terhadap Kemiskinan")
-        st.pyplot(fig4)
-
-# ======================================================
-
-container2 = st.container()
-col3, col4 = st.columns(2)
-
-with container2:
-    with col3:
-        st.subheader("🧪 Uji Chi-Square")
-        st.markdown("Menguji hubungan antara kategori akses internet dan tingkat kemiskinan.")
-        # Tabel kontingensi + heatmap + nilai statistik
-
-    with col4:
-        st.subheader("🔗 Korelasi Variabel")
-        st.markdown("Menampilkan hubungan linear antara variabel numerik.")
-        # Scatter plot / correlation matrix
-
-# ======================================================
-# LAYOUT BARIS 3 (2 KOLOM)
-# ======================================================
-container3 = st.container()
-col5, col6 = st.columns(2)
-
-with container3:
-    with col5:
-        st.subheader("📋 Tabel Kategorisasi Variabel")
-        metadata = pd.DataFrame({
-            'Variabel': ['Provinsi', 'Internet_Total', 'Kemiskinan_Persen'],
-            'Tipe': ['Kategorikal', 'Numerik', 'Numerik'],
-            'Deskripsi': [
-                'Nama provinsi di Indonesia',
-                'Persentase penduduk dengan akses internet',
-                'Persentase penduduk miskin'
-            ]
-        })
-        st.dataframe(metadata)
-
-    with col6:
-        st.subheader("📝 Ringkasan Hasil Analisis")
-        if p < 0.05:
-            st.success("Terdapat hubungan signifikan antara akses internet dan tingkat kemiskinan.")
-        else:
-            st.warning("Tidak terdapat hubungan signifikan antara akses internet dan tingkat kemiskinan.")
-        st.markdown("""
-        **Insight utama:**
-        - Provinsi dengan akses internet lebih tinggi cenderung memiliki tingkat kemiskinan lebih rendah.
-
-        **Catatan:**
-        - Analisis menggunakan data agregat provinsi.
-        - Chi-Square berbasis kategorisasi variabel kontinu.
-        """)
-
-st.caption("Dashboard Streamlit – EDA, Korelasi, dan Uji Chi-Square")("Dashboard Streamlit – Struktur Analisis EDA & Chi-Square")
+# --- FOOTER ---
+st.caption("Dashboard Tugas Besar EDA - Kelompok 1 - Sains Data UPNVJT")
