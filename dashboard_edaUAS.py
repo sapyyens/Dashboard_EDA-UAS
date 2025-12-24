@@ -72,10 +72,30 @@ col4.metric("R²", "0.6796")
 st.divider()
 
 # =====================================================
-# VALIDASI (ANTI PETA PUTIH)
+# AUTO DETECT FIELD PROVINSI GEOJSON
 # =====================================================
-geo_names = [f["properties"]["NAME_1"] for f in geojson_data["features"]]
-assert df["Prov_Match"].isin(geo_names).all(), "❌ Nama provinsi tidak cocok dengan GeoJSON"
+sample_props = geojson_data["features"][0]["properties"]
+prov_key = list(sample_props.keys())[0]
+
+# =====================================================
+# VALIDASI
+# =====================================================
+geo_names = [f["properties"][prov_key] for f in geojson_data["features"]]
+assert df["Prov_Match"].isin(geo_names).all(), "❌ Nama provinsi tidak cocok"
+
+# =====================================================
+# PETA
+# =====================================================
+fig_map = px.choropleth(
+    df,
+    geojson=geojson_data,
+    locations="Prov_Match",
+    featureidkey=f"properties.{prov_key}",
+    color="Internet_Total",
+    color_continuous_scale="RdYlGn",
+    hover_name="Provinsi",
+    labels={"Internet_Total": "Akses Internet (%)"}
+)
 
 # =====================================================
 # PETA CHOROPLETH
@@ -186,3 +206,4 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
