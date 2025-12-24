@@ -97,7 +97,7 @@ fig_map.update_layout(
 )
 
 st.plotly_chart(fig_map, use_container_width=True)
-
+st.success("**P-Value: 0.001871** (Hubungan Signifikan)")
 # =====================================================
 # REGRESI
 # =====================================================
@@ -179,5 +179,6 @@ st.warning(
     "Insight: Nilai **2.693** menunjukkan konsentrasi signifikan pada "
     "**Kemiskinan Tinggi – Internet Rendah**."
 )
+
 
 
